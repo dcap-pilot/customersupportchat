@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)http://dcap-chatbot.localhost/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>DCAP Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="keywords" content="">
+    <meta name="csrf-token" content="fCtSayAjnTWQoUdkQS0Fgf8sjINenLoxKHFf6xEX">
+
+    <!-- ================== BEGIN BASE CSS STYLE ================== -->
+    <link href="./DCAP Chatbot 6_files/app.min.css" rel="stylesheet">
+    <link rel="icon" href="http://dcap-chatbot.localhost/assets/img/logo%202.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <!-- ================== END BASE CSS STYLE ================== -->
+
+    <style type="text/css">
+        .card-header {
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 9999; /* Highest z-index to ensure it's on top */
+        }
+
+        .fixed-footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 9999; /* Highest z-index to ensure it's on top */
+            background-color: white; /* Ensures the footer has a background color */
+        }
+
+        .card-body {
+            margin-top: 48px; /* Adjust this value if necessary to ensure content does not overlap the fixed footer */
+            margin-bottom: 55px; /* Adjust this value if necessary to ensure content does not overlap the fixed footer */
+            overflow: hidden;
+            width: auto;
+            min-height: calc(100vh - 100px);
+        }
+
+        /* Ensure the container takes up half the screen size on larger devices */
+        @media (min-width: 768px) {
+            .chat-container {
+                max-width: 50%;
+                margin: 0 auto; /* Center the container */
+            }
+        }
+
+        @media (min-width: 992px) {
+            body, html, #app {
+                height: inherit;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .chat-container {
+                max-width: 50%;
+                margin: 0 auto; /* Center the container */
+            }
+        }
+
+        @media (min-width: 768px) {
+            .fixed-footer {
+                position: fixed;
+                width: 50%; /* Keep the footer half the width */
+                left: 25%; /* Center the footer by offsetting from the left */
+            }
+            .card-header {
+                position: fixed;
+                width: 50%;
+                top: 0;
+            }
+
+            /*.card-body {
+                margin-bottom: calc(60px); /* Adjust to ensure content is not hidden behind the footer */
+            }*/
+        }
+
+        @media (min-width: 992px) {
+            /*.chat-container .card-body .widget-chat {
+                margin-bottom: 60px !important;
+            }*/
+        }
+
+        body {
+            background-color: rgb(40, 40, 40);
+        }
+
+        .faded-message {
+            color:rgb(44, 44, 44)0; /* Grey color for faded text */
+            font-style: italic; /* Optional: Italicize the text for a faded look */
+            text-align: center; /* Optional: Center align the text */
+            margin-bottom: 30px ; /* Optional: Add some margin for spacing */
+            font-size: small;
+        }
+
+        .faded-message-end {
+            color:rgb(44, 44, 44)0; /* Grey color for faded text */
+            font-style: italic; /* Optional: Italicize the text for a faded look */
+            text-align: center; /* Optional: Center align the text */
+            margin-top: 20px ; /* Optional: Add some margin for spacing */
+            margin-bottom : px;
+            font-size: small;
+        }
+
+        .chat-container > .slimScrollDiv {
+            min-height: calc(100vh - 100px)
+        }
+    </style>
+    <script src="./DCAP Chatbot 6_files/app.min.js"></script>
+
+    <script>
+
+        $(document).ready(function() {
+            checkChatBox();
+            scrollTop();
+
+            function scrollTop() {
+                $('html, body').animate({ scrollTop: $(document).height() }, 'slow');
+            }
+
+            $('#message-field').on('keypress', function(e) {
+                if (e.which === 13) {
+                    sendMessage();
+                }
+            });
+
+            $(document).on('click', '#send-message', function() {
+                sendMessage();
+            });
+
+            function disableChatBox()
+            {
+                $("#message-field").prop('disabled', true);
+            }
+
+            function enableChatBox()
+            {
+                $("#message-field").prop('disabled', false);
+            }
+
+            function checkChatBox()
+            {
+                if ($("#message_sent").val() == 1) {
+                    disableChatBox();
+                }
+            }
+
+            function sendMessage() {
+                disableChatBox();
+
+                var message = $("#message-field").val();
+                if (message == '') {
+                    return;
+                }
+                var sessionId = $("#session_id").val();
+
+                var myKeyVals = {message: message, session_id:sessionId};
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                request = $.ajax({
+                    url: '/send-message',
+                    type: "POST",
+                    data: myKeyVals
+                });
+
+                // Callback handler that will be called on success
+                request.done(function (response){
+                    if (response.status == 1) {
+                        appendUserMessage(response.message);
+                        $("#message-field").val('');
+                        $("#message_sent").val(1);
+                        $("#last_message_time").val(response.message.display_created_at);
+                    }
+                });
+
+                // Callback handler that will be called on failure
+                request.fail(function (jqXHR, textStatus, errorThrown){
+                    // Log the error to the console
+                    console.error(
+                        "The following error occurred: " +
+                        textStatus, errorThrown
+                    );
+                });
+            }
+
+            function appendUserMessage(message)
+            {
+                var template = '<div class="widget-chat-item reply">' +
+                    '<div class="widget-chat-content">' +
+                        '<div class="widget-chat-message last">' + message.message + '</div>' +
+                        '<div class="widget-chat-status">' + message.time_sent + '</div>' +
+                    '</div>' +
+                '</div>';
+
+                $(".widget-chat-item").last().after(template);
+
+                scrollTop();
+            }
+
+            setInterval(checkReply, 10000);
+
+            function checkReply()
+            {
+                if ($("#message_sent").val() == 1) {
+                    var sessionId = $("#session_id").val();
+                    var lastMessageTime = $("#last_message_time").val();
+
+                    var myKeyVals = {session_id: sessionId, last_message_time: lastMessageTime};
+                    $.ajaxSetup({
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        }
+                    });
+                    request = $.ajax({
+                        url: '/get-message',
+                        type: "POST",
+                        data: myKeyVals
+                    });
+
+                    // Callback handler that will be called on success
+                    request.done(function (response){
+                        if (response.status == 1) {
+                            appendDcapMessage(response.new_messages);
+                            $("#message_sent").val(0);
+                            $("#last_message_time").val(response.last_message_time);
+
+                            enableChatBox();
+                        }
+                    });
+                }
+            }
+
+            function appendDcapMessage(newMessages)
+            {
+                newMessages.forEach(function(message) {
+                    var template = '<div class="widget-chat-item">' +
+                        '<div class="widget-chat-media"><img src="assets/img/user/dcap-ai.png" alt="" /></div>' +
+                        '<div class="widget-chat-content">' +
+                            '<div class="widget-chat-name">' + message.sender + '</div>' +
+                            '<div class="widget-chat-message last">' + message.message + '</div>' +
+                            '<div class="widget-chat-status">' + message.time_sent + '</div>' +
+                        '</div>' +
+                    '</div>';
+
+                    $(".widget-chat-item").last().after(template);
+
+                    scrollTop();
+                });
+            }
+        });
+    </script>
+</head>
+<body class="  pace-done"><div class="pace  pace-inactive"><div class="pace-progress" data-progress-text="100%" data-progress="99" style="transform: translate3d(100%, 0px, 0px);">
+  <div class="pace-progress-inner"></div>
+</div>
+<div class="pace-activity"></div></div>
+    <div class="chat-container">
+        <div class="pace pace-inactive">
+            <div class="pace-progress" data-progress-text="100%" data-progress="99" style="transform: translate3d(100%, 0px, 0px);">
+                <div class="pace-progress-inner"></div>
+            </div>
+            <div class="pace-activity"></div>
+        </div>
+
+        <div class="card-header bg-white font-weight-600 d-flex align-items-center">
+            Customer Support
+            <div class="ml-auto"><img src="./DCAP Chatbot 6_files/Logo_DCAP_Primary.png" alt="" width="50"></div>
+        </div>
+        <div class="slimScrollDiv" style="width: auto;">
+            <div class="card-body bg-gray-100" id="scrollable-msg" data-scrollbar="true" data-init="true">
+                <div class="widget-chat">
+                    <div class="faded-message">Satu mesej sahaja boleh dihantar pada satu masa. Sila tunggu jawapan dari khidmat pelanggan sebelum menghantar mesej seterusnya.</div>
+                    
+                                                                                <div class="widget-chat-item ">
+                                                <div class="widget-chat-media"><img src="./DCAP Chatbot 6_files/cs_assistant_2.png" alt=""></div>
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-name">Aisyah</div>
+                                                        <div class="widget-chat-message last">
+                                Hi. Ada apa yang boleh saya bantu?
+                                                            </div>
+                            <div class="widget-chat-status">12:39pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item reply">
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-message last">
+                                Mau tanya sikit
+                                                            </div>
+                            <div class="widget-chat-status">12:39pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item ">
+                                                <div class="widget-chat-media"><img src="./DCAP Chatbot 6_files/cs_assistant_2.png" alt=""></div>
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-name">Aisyah</div>
+                                                        <div class="widget-chat-message last">
+                                Ok. boleh buat pengesahan dulu. Sila beri NRIC, nama dan nombor plat kenderaan?
+                                                            </div>
+                            <div class="widget-chat-status">12:39pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item reply">
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-message last">
+                                881211-13-5697, Tang Choo Zin dan VBL9720
+                                                            </div>
+                            <div class="widget-chat-status">12:41pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item ">
+                                                <div class="widget-chat-media"><img src="./DCAP Chatbot 6_files/cs_assistant_2.png" alt=""></div>
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-name">Aisyah</div>
+                                                        <div class="widget-chat-message last">
+                                Ok, Encik Tang. Ada apa saya boleh bantu?
+                                                            </div>
+                            <div class="widget-chat-status">12:41pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item reply">
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-message last">
+                                Boleh bagi cara pembayaran tak?
+                                                            </div>
+                            <div class="widget-chat-status">12:42pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item ">
+                                                <div class="widget-chat-media"><img src="./DCAP Chatbot 6_files/cs_assistant_2.png" alt=""></div>
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-name">Aisyah</div>
+                                                        <div class="widget-chat-message last">
+                                Ok, ini ialah eflyer untuk cara pembayaran. Ada apa lagi saya boleh bantu?
+                                                                <div class="list-group mt-3">
+                                    <a href="https://dcap-prod.s3.ap-southeast-1.amazonaws.com/payment_instruction/payment_instruction-phpConPJx-20240709161014.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&amp;X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIARESEZQASKBTPEAFI%2F20240814%2Fap-southeast-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240814T052130Z&amp;X-Amz-SignedHeaders=host&amp;X-Amz-Expires=900&amp;X-Amz-Signature=c7defa7a2cbcbd07ef134f8b304eb76ee613f7c7e4f1505ac675a72b210f4d28" target="_blank" class="list-group-item list-group-item-action d-flex align-items-center text-dark">
+                                        <div class="width-50 height-50 d-flex align-items-center justify-content-center ml-n1">
+                                            <i class="fas fa-lg fa-fw me-2 fa-file-pdf fa-4x"></i>
+                                        </div>
+                                        <div class="flex-fill pl-3 pr-3">
+                                            <div class="font-weight-600">Payment Instruction</div>
+                                            
+                                        </div>
+                                    </a>
+                                </div>
+                                                            </div>
+                            <div class="widget-chat-status">12:42pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item reply">
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-message last">
+                                okay, terima kasih
+                                                            </div>
+                            <div class="widget-chat-status">12:50pm</div>
+                        </div>
+                    </div>
+                                                            <div class="widget-chat-item ">
+                                                <div class="widget-chat-media"><img src="./DCAP Chatbot 6_files/cs_assistant_2.png" alt=""></div>
+                                                <div class="widget-chat-content">
+                                                        <div class="widget-chat-name">Aisyah</div>
+                                                        <div class="widget-chat-message last">
+                                Sama sama. Saya akan tamatkan sesi perbualan ini ya.
+                                                            </div>
+                            <div class="widget-chat-status">12:50pm</div>
+                        </div>
+                    </div>
+                        <div class="widget-chat-item reply">
+                        <div class="widget-chat-content">
+                        <div class="widget-chat-message last">boleh. terima kasih sekali lagi</div>
+                            <div class="widget-chat-status">12:51pm</div>
+                        </div>
+                    </div>
+                        <div class="faded-message-end">Sesi perbualan ini telah ditamatkan. Sila refresh untuk memulakan sesi baharu.</div>
+                </div>
+            </div>
+            <div class="card-footer bg-white fixed-footer">
+                <div class="input-group">
+                    <input type="text" id="message-field" class="form-control" placeholder="" autofocus="" disabled="">
+                    <span class="input-group-append">
+                        <input type="hidden" id="session_id" value="a5b5b86a-9137-40bf-9108-35b7b104fa4b">
+                        <input type="hidden" id="message_sent" value="1">
+                        <input type="hidden" id="last_message_time" value="2024-08-14 12:51:45">
+                        <button class="btn btn-default" id="send-message" type="button"><i class="fa fa-paper-plane text-muted"></i></button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</body></html>
